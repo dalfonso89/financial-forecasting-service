@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	currencymodels "github.com/dalfonso89/currency-exchange-service/models"
 	"github.com/dalfonso89/financial-forecasting-service/client"
 	"github.com/dalfonso89/financial-forecasting-service/config"
 	"github.com/dalfonso89/financial-forecasting-service/logger"
@@ -65,9 +64,6 @@ func (fs *ForecastingService) GenerateForecast(ctx context.Context, req *models.
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch exchange rates: %w", err)
 	}
-
-	// Ensure we're using the imported currencymodels.RatesResponse type
-	var _ currencymodels.RatesResponse = *rates
 
 	// Get current rate for target currency
 	currentRate, exists := rates.Rates[req.TargetCurrency]
