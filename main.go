@@ -48,10 +48,6 @@ func main() {
 		WriteTimeout: 15 * time.Second,
 	}
 
-	// Create shutdown context with timeout
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer shutdownCancel()
-
 	// Start server in a goroutine
 	serverErr := make(chan error, 1)
 	go func() {
@@ -70,14 +66,14 @@ func main() {
 		loggerInstance.Infof("Received signal: %v", sig)
 	case err := <-serverErr:
 		loggerInstance.Errorf("Server error: %v", err)
-		shutdownCancel() // Cancel shutdown context
-		os.Exit(1)
-	case <-shutdownCtx.Done():
-		loggerInstance.Error("Shutdown context cancelled")
 		os.Exit(1)
 	}
 
 	loggerInstance.Info("Shutting down server...")
+
+	// Create shutdown context with timeout
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
 
 	// Graceful server shutdown
 	if err := server.Shutdown(shutdownCtx); err != nil {
@@ -91,4 +87,3 @@ func main() {
 
 	loggerInstance.Info("Server stopped gracefully")
 }
-

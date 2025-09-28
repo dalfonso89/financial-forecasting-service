@@ -313,3 +313,118 @@ func TestHandlers_WriteErrorResponse(t *testing.T) {
 		t.Errorf("Expected code %d, got %d", http.StatusBadRequest, errorResponse.Code)
 	}
 }
+
+func TestHandlers_GetLatestForecast(t *testing.T) {
+	// Create test configuration
+	cfg := &config.Config{
+		SupportedCurrencies:        []string{"USD", "EUR", "GBP"},
+		DefaultForecastPeriods:     30,
+		CurrencyExchangeServiceURL: "http://localhost:8081",
+	}
+
+	// Create test logger
+	loggerInstance := logger.New("debug")
+
+	// Create forecasting service
+	forecastingService := service.NewForecastingService(cfg, loggerInstance)
+
+	// Create handlers
+	handlers := NewHandlers(HandlerConfig{
+		Logger:             loggerInstance,
+		ForecastingService: forecastingService,
+	})
+
+	// Setup router
+	router := handlers.SetupRoutes()
+
+	tests := []struct {
+		name           string
+		url            string
+		expectedStatus int
+		expectError    bool
+	}{
+		{
+			name:           "valid forecast request with defaults (currency service unavailable)",
+			url:            "/api/v1/forecast/latest/USD/EUR",
+			expectedStatus: http.StatusInternalServerError,
+			expectError:    true,
+		},
+		{
+			name:           "valid forecast request with custom parameters (currency service unavailable)",
+			url:            "/api/v1/forecast/latest/USD/EUR?amount=5000&periods=7&type=exponential",
+			expectedStatus: http.StatusInternalServerError,
+			expectError:    true,
+		},
+		{
+			name:           "invalid amount parameter",
+			url:            "/api/v1/forecast/latest/USD/EUR?amount=invalid",
+			expectedStatus: http.StatusBadRequest,
+			expectError:    true,
+		},
+		{
+			name:           "invalid periods parameter",
+			url:            "/api/v1/forecast/latest/USD/EUR?periods=invalid",
+			expectedStatus: http.StatusBadRequest,
+			expectError:    true,
+		},
+		{
+			name:           "invalid forecast type",
+			url:            "/api/v1/forecast/latest/USD/EUR?type=invalid",
+			expectedStatus: http.StatusBadRequest,
+			expectError:    true,
+		},
+		{
+			name:           "unsupported currency",
+			url:            "/api/v1/forecast/latest/INVALID/EUR",
+			expectedStatus: http.StatusInternalServerError,
+			expectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create HTTP request
+			req, err := http.NewRequest("GET", tt.url, nil)
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+
+			// Create response recorder
+			w := httptest.NewRecorder()
+
+			// Perform request
+			router.ServeHTTP(w, req)
+
+			// Check status code
+			if w.Code != tt.expectedStatus {
+				t.Errorf("Expected status %d, got %d", tt.expectedStatus, w.Code)
+			}
+
+			if tt.expectError {
+				// Check that response contains error information
+				var errorResponse models.ErrorResponse
+				if err := json.Unmarshal(w.Body.Bytes(), &errorResponse); err != nil {
+					t.Errorf("Failed to unmarshal error response: %v", err)
+				}
+				if errorResponse.Error == "" {
+					t.Error("Expected error message in response")
+				}
+			} else {
+				// Check that response contains forecast data
+				var forecastResponse models.ForecastResponse
+				if err := json.Unmarshal(w.Body.Bytes(), &forecastResponse); err != nil {
+					t.Errorf("Failed to unmarshal forecast response: %v", err)
+				}
+				if forecastResponse.BaseCurrency == "" {
+					t.Error("Expected base currency in response")
+				}
+				if forecastResponse.TargetCurrency == "" {
+					t.Error("Expected target currency in response")
+				}
+				if len(forecastResponse.Forecasts) == 0 {
+					t.Error("Expected forecast periods in response")
+				}
+			}
+		})
+	}
+}

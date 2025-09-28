@@ -59,6 +59,7 @@ func (handlers *Handlers) SetupRoutes() *gin.Engine {
 		apiV1.POST("/forecast", handlers.GenerateForecast)
 		apiV1.POST("/forecast/multi-currency", handlers.GenerateMultiCurrencyForecast)
 		apiV1.GET("/forecast/trend/:base/:target", handlers.AnalyzeTrend)
+		apiV1.GET("/forecast/latest/:base/:target", handlers.GetLatestForecast)
 		apiV1.DELETE("/forecast/cache", handlers.ClearCache)
 
 		// Currency information routes
@@ -161,6 +162,61 @@ func (handlers *Handlers) GetCurrentRates(context *gin.Context) {
 	})
 }
 
+// GetLatestForecast generates a forecast based on the latest currency exchange data
+func (handlers *Handlers) GetLatestForecast(context *gin.Context) {
+	baseCurrency := context.Param("base")
+	targetCurrency := context.Param("target")
+
+	// Parse query parameters with defaults
+	amountStr := context.DefaultQuery("amount", "1000")
+	periodsStr := context.DefaultQuery("periods", "30")
+	forecastType := context.DefaultQuery("type", "linear")
+
+	amount, err := strconv.ParseFloat(amountStr, 64)
+	if err != nil {
+		handlers.writeErrorResponse(context, http.StatusBadRequest, "invalid amount parameter", "amount must be a valid number")
+		return
+	}
+
+	periods, err := strconv.Atoi(periodsStr)
+	if err != nil {
+		handlers.writeErrorResponse(context, http.StatusBadRequest, "invalid periods parameter", "periods must be a valid integer")
+		return
+	}
+
+	// Validate forecast type
+	validTypes := []string{"linear", "exponential", "moving_average"}
+	isValidType := false
+	for _, validType := range validTypes {
+		if forecastType == validType {
+			isValidType = true
+			break
+		}
+	}
+	if !isValidType {
+		handlers.writeErrorResponse(context, http.StatusBadRequest, "invalid forecast type", "forecast type must be one of: linear, exponential, moving_average")
+		return
+	}
+
+	// Create forecast request
+	req := &models.ForecastRequest{
+		BaseCurrency:   baseCurrency,
+		TargetCurrency: targetCurrency,
+		Amount:         amount,
+		Periods:        periods,
+		ForecastType:   forecastType,
+	}
+
+	// Generate forecast using the latest exchange rates
+	forecast, err := handlers.forecastingService.GenerateForecast(context.Request.Context(), req)
+	if err != nil {
+		handlers.handleServiceError(context, err)
+		return
+	}
+
+	context.JSON(http.StatusOK, forecast)
+}
+
 // writeErrorResponse writes an error response using Gin context
 func (handlers *Handlers) writeErrorResponse(context *gin.Context, statusCode int, errorMessage, errorDetails string) {
 	errorResponse := models.ErrorResponse{
@@ -200,4 +256,3 @@ func (handlers *Handlers) corsMiddleware() gin.HandlerFunc {
 		context.Next()
 	}
 }
-

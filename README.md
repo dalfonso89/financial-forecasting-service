@@ -20,12 +20,76 @@ A Golang microservice that provides financial forecasting capabilities by consum
 ### Forecasting
 - `POST /api/v1/forecast` - Generate single currency forecast
 - `POST /api/v1/forecast/multi-currency` - Generate multi-currency forecast
+- `GET /api/v1/forecast/latest/:base/:target` - Get forecast based on latest exchange rates
 - `GET /api/v1/forecast/trend/:base/:target` - Analyze currency trend
 - `DELETE /api/v1/forecast/cache` - Clear forecast cache
 
 ### Currency Information
 - `GET /api/v1/currencies` - Get supported currencies
 - `GET /api/v1/currencies/rates/:base` - Get current exchange rates
+
+## API Examples
+
+### Get Latest Forecast (New Endpoint)
+
+The new `/api/v1/forecast/latest/:base/:target` endpoint provides a simplified way to get financial forecasts based on the latest currency exchange data.
+
+#### Basic Usage
+```bash
+# Get forecast for USD to EUR with default parameters
+curl "http://localhost:50002/api/v1/forecast/latest/USD/EUR"
+```
+
+#### With Custom Parameters
+```bash
+# Custom amount, periods, and forecast type
+curl "http://localhost:50002/api/v1/forecast/latest/USD/EUR?amount=5000&periods=7&type=exponential"
+```
+
+#### Query Parameters
+- `amount` (optional): Amount to forecast (default: 1000)
+- `periods` (optional): Number of forecast periods (default: 30)
+- `type` (optional): Forecast type - `linear`, `exponential`, or `moving_average` (default: linear)
+
+#### Response Example
+```json
+{
+  "base_currency": "USD",
+  "target_currency": "EUR",
+  "current_rate": 0.85675,
+  "amount": 5000,
+  "forecast_type": "exponential",
+  "periods": 7,
+  "forecasts": [
+    {
+      "period": 1,
+      "date": "2025-09-29",
+      "rate": 0.8585,
+      "amount": 4292.32,
+      "change": 0,
+      "change_percent": 0
+    },
+    {
+      "period": 2,
+      "date": "2025-09-30",
+      "rate": 0.8602,
+      "amount": 4300.9,
+      "change": 0.0017,
+      "change_percent": 0.2
+    }
+  ],
+  "generated_at": "2025-09-28T12:23:40.6402427-04:00",
+  "confidence_score": 0.6
+}
+```
+
+#### Error Handling
+The endpoint includes comprehensive error handling:
+- Invalid amount parameter: Returns 400 Bad Request
+- Invalid periods parameter: Returns 400 Bad Request  
+- Invalid forecast type: Returns 400 Bad Request
+- Unsupported currency: Returns 500 Internal Server Error
+- Currency service unavailable: Returns 500 Internal Server Error
 
 ## Configuration
 
