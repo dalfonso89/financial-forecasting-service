@@ -19,12 +19,15 @@ import (
 func createTestHandlers() *Handlers {
 	gin.SetMode(gin.TestMode)
 	loggerInstance := logger.New("debug")
-	cfg := &config.Config{}
+	cfg := &config.Config{
+		SupportedCurrencies: []string{"USD", "EUR", "GBP", "JPY"},
+	}
 	forecastingService := service.NewForecastingService(cfg, loggerInstance)
 
 	return &Handlers{
 		logger:             loggerInstance,
 		forecastingService: forecastingService,
+		config:             cfg,
 	}
 }
 

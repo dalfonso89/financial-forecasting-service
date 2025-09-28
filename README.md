@@ -110,6 +110,7 @@ cp env.example .env
 | `FORECAST_CACHE_TTL_SECONDS` | 300 | Forecast cache TTL in seconds |
 | `MAX_CONCURRENT_REQUESTS` | 10 | Maximum concurrent requests |
 | `DEFAULT_FORECAST_PERIODS` | 30 | Default number of forecast periods |
+| `SUPPORTED_CURRENCIES` | USD,EUR,GBP,JPY,CAD,AUD,CHF,CNY,SEK,NZD | Comma-separated list of supported currencies |
 
 ## Usage
 

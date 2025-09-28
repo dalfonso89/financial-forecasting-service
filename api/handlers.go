@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/dalfonso89/financial-forecasting-service/config"
 	"github.com/dalfonso89/financial-forecasting-service/logger"
 	"github.com/dalfonso89/financial-forecasting-service/middleware"
 	"github.com/dalfonso89/financial-forecasting-service/models"
@@ -17,6 +18,7 @@ import (
 type HandlerConfig struct {
 	Logger             logger.Logger
 	ForecastingService *service.ForecastingService
+	Config             *config.Config
 }
 
 // Handlers contains all HTTP handlers
@@ -24,6 +26,7 @@ type Handlers struct {
 	logger             logger.Logger
 	startTime          time.Time
 	forecastingService *service.ForecastingService
+	config             *config.Config
 }
 
 // NewHandlers creates a new handlers instance with all dependencies
@@ -32,6 +35,7 @@ func NewHandlers(config HandlerConfig) *Handlers {
 		logger:             config.Logger,
 		startTime:          time.Now(),
 		forecastingService: config.ForecastingService,
+		config:             config.Config,
 	}
 }
 
@@ -145,9 +149,7 @@ func (handlers *Handlers) ClearCache(context *gin.Context) {
 
 // GetSupportedCurrencies returns the list of supported currencies
 func (handlers *Handlers) GetSupportedCurrencies(context *gin.Context) {
-	// This would typically come from configuration
-	supportedCurrencies := []string{"USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", "SEK", "NZD"}
-	context.JSON(http.StatusOK, gin.H{"currencies": supportedCurrencies})
+	context.JSON(http.StatusOK, gin.H{"currencies": handlers.config.SupportedCurrencies})
 }
 
 // GetCurrentRates fetches current exchange rates from the currency service

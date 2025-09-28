@@ -34,6 +34,7 @@ func main() {
 	handlerConfig := api.HandlerConfig{
 		Logger:             loggerInstance,
 		ForecastingService: forecastingService,
+		Config:             cfg,
 	}
 	handlers := api.NewHandlers(handlerConfig)
 

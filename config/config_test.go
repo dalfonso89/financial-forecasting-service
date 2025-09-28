@@ -109,6 +109,146 @@ func TestLoad_EnvironmentVariables(t *testing.T) {
 	os.Clearenv()
 }
 
+func TestLoad_SupportedCurrencies(t *testing.T) {
+	tests := []struct {
+		name               string
+		envValue           string
+		expectedCurrencies []string
+	}{
+		{
+			name:               "default currencies",
+			envValue:           "",
+			expectedCurrencies: []string{"USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", "SEK", "NZD"},
+		},
+		{
+			name:               "custom currencies",
+			envValue:           "USD,EUR,GBP",
+			expectedCurrencies: []string{"USD", "EUR", "GBP"},
+		},
+		{
+			name:               "currencies with spaces",
+			envValue:           "USD, EUR , GBP ",
+			expectedCurrencies: []string{"USD", "EUR", "GBP"},
+		},
+		{
+			name:               "currencies with mixed case",
+			envValue:           "usd,EUR,gbp",
+			expectedCurrencies: []string{"USD", "EUR", "GBP"},
+		},
+		{
+			name:               "single currency",
+			envValue:           "USD",
+			expectedCurrencies: []string{"USD"},
+		},
+		{
+			name:               "empty currencies",
+			envValue:           "",
+			expectedCurrencies: []string{"USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", "SEK", "NZD"},
+		},
+		{
+			name:               "currencies with empty elements",
+			envValue:           "USD,,EUR, ,GBP",
+			expectedCurrencies: []string{"USD", "EUR", "GBP"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Clear environment
+			os.Clearenv()
+
+			// Set the environment variable if not empty
+			if tt.envValue != "" {
+				os.Setenv("SUPPORTED_CURRENCIES", tt.envValue)
+			}
+
+			config, err := Load()
+			if err != nil {
+				t.Fatalf("Expected no error, got %v", err)
+			}
+
+			if len(config.SupportedCurrencies) != len(tt.expectedCurrencies) {
+				t.Errorf("Expected %d currencies, got %d", len(tt.expectedCurrencies), len(config.SupportedCurrencies))
+			}
+
+			for i, expected := range tt.expectedCurrencies {
+				if i >= len(config.SupportedCurrencies) {
+					t.Errorf("Expected currency %s at index %d, but only %d currencies found", expected, i, len(config.SupportedCurrencies))
+					continue
+				}
+				if config.SupportedCurrencies[i] != expected {
+					t.Errorf("Expected currency %s at index %d, got %s", expected, i, config.SupportedCurrencies[i])
+				}
+			}
+		})
+	}
+}
+
+func TestGetSupportedCurrencies(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "normal currencies",
+			input:    "USD,EUR,GBP",
+			expected: []string{"USD", "EUR", "GBP"},
+		},
+		{
+			name:     "currencies with spaces",
+			input:    "USD, EUR , GBP ",
+			expected: []string{"USD", "EUR", "GBP"},
+		},
+		{
+			name:     "mixed case currencies",
+			input:    "usd,EUR,gbp",
+			expected: []string{"USD", "EUR", "GBP"},
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: []string{"USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", "SEK", "NZD"},
+		},
+		{
+			name:     "currencies with empty elements",
+			input:    "USD,,EUR, ,GBP",
+			expected: []string{"USD", "EUR", "GBP"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Temporarily set the environment variable
+			originalValue := os.Getenv("SUPPORTED_CURRENCIES")
+			os.Setenv("SUPPORTED_CURRENCIES", tt.input)
+
+			result := getSupportedCurrencies()
+
+			// Restore original value
+			if originalValue == "" {
+				os.Unsetenv("SUPPORTED_CURRENCIES")
+			} else {
+				os.Setenv("SUPPORTED_CURRENCIES", originalValue)
+			}
+
+			if len(result) != len(tt.expected) {
+				t.Errorf("Expected %d currencies, got %d", len(tt.expected), len(result))
+			}
+
+			for i, expected := range tt.expected {
+				if i >= len(result) {
+					t.Errorf("Expected currency %s at index %d, but only %d currencies found", expected, i, len(result))
+					continue
+				}
+				if result[i] != expected {
+					t.Errorf("Expected currency %s at index %d, got %s", expected, i, result[i])
+				}
+			}
+		})
+	}
+}
+
 func TestLoad_InvalidNumericValues(t *testing.T) {
 	// Set invalid numeric environment variables
 	os.Setenv("CURRENCY_EXCHANGE_TIMEOUT_SECONDS", "invalid")
@@ -187,4 +327,3 @@ func TestMustAtoi(t *testing.T) {
 		}
 	}
 }
-
